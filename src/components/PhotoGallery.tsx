@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { DialogTitle } from "@radix-ui/react-dialog";
 import { Download, Heart, Share2, X } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 
 interface Photo {
@@ -25,9 +27,11 @@ export const PhotoGallery = ({ photos }: PhotoGalleryProps) => {
             className="group relative overflow-hidden cursor-pointer bg-muted rounded-sm"
             onClick={() => setSelectedPhoto(photo)}
           >
-            <img
+            <Image
               src={photo.src}
               alt={photo.alt}
+              width={100}
+              height={100}
               className={`w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 ${
                 photo.className || ""
               }`}
@@ -85,6 +89,11 @@ export const PhotoGallery = ({ photos }: PhotoGalleryProps) => {
         onOpenChange={() => setSelectedPhoto(null)}
       >
         <DialogContent className="max-w-7xl w-full h-[90vh] p-0 bg-black/95 border-none">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg">
+              {selectedPhoto?.alt}
+            </DialogTitle>
+          </DialogHeader>
           <button
             onClick={() => setSelectedPhoto(null)}
             className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors text-white"
@@ -95,9 +104,11 @@ export const PhotoGallery = ({ photos }: PhotoGalleryProps) => {
 
           {selectedPhoto && (
             <div className="flex items-center justify-center w-full h-full p-8">
-              <img
+              <Image
                 src={selectedPhoto.src}
                 alt={selectedPhoto.alt}
+                width={500}
+                height={500}
                 className="max-w-full max-h-full object-contain"
               />
             </div>
