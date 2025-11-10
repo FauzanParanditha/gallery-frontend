@@ -1,9 +1,9 @@
-import Auth from "@/components/dashboard/Auth";
+import AuthClient from "./AuthClient";
 
 export const metadata = {
   title: "Login | Page",
 };
 
 export default function LoginPage() {
-  return <Auth />;
+  return <AuthClient />;
 }

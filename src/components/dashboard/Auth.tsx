@@ -12,51 +12,118 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiPost } from "@/libs/clientAxios";
+import { getErrorMsg } from "@/libs/helper";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+
+type LoginRes = { user: { id: string; email: string; name?: string } };
 
 export default function Auth() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isResetMode, setIsResetMode] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  // --- LOGIN
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email");
-    toast.success(`Login attempted for ${email}`, {
-      description: "Connect backend to enable real authentication",
-    });
+    setSubmitting(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const email = (formData.get("email") || "").toString().trim();
+      const password = (formData.get("password") || "").toString();
+
+      if (!email || !password)
+        throw new Error("Email dan password wajib diisi.");
+
+      // Panggil backend: server akan set cookie access + refresh
+      const data = await apiPost<LoginRes>("/v1/auth/login", {
+        email,
+        password,
+      });
+      toast.success("Login berhasil", { description: data.user?.email });
+      router.push("/dashboard/admin");
+    } catch (e) {
+      toast.error("Login gagal", { description: getErrorMsg(e) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent<HTMLFormElement>) => {
+  // --- SIGNUP (contoh: /auth/register atau /users (admin-only) -> sesuaikan endpoint kamu)
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email");
-    toast.success(`Signup attempted for ${email}`, {
-      description: "Connect backend to enable real authentication",
-    });
+    setSubmitting(true);
+    try {
+      const fd = new FormData(e.currentTarget);
+      const name = (fd.get("name") || "").toString().trim();
+      const email = (fd.get("email") || "").toString().trim();
+      const password = (fd.get("password") || "").toString();
+      const confirmPassword = (fd.get("confirmPassword") || "").toString();
+
+      if (password !== confirmPassword)
+        throw new Error("Password konfirmasi tidak sama.");
+
+      // Ubah path-nya sesuai backend kamu (misal /auth/register)
+      await apiPost("/auth/register", { name, email, password });
+
+      toast.success("Pendaftaran berhasil", { description: "Silakan login." });
+      // opsional: langsung login
+      // await apiPost<LoginRes>("/auth/login", { email, password });
+      // router.push("/");
+    } catch (e) {
+      toast.error("Signup gagal", { description: getErrorMsg(e) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleForgotPassword = (e: React.FormEvent<HTMLFormElement>) => {
+  // --- FORGOT PASSWORD (contoh endpoint)
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email");
-    toast.success(`Password reset link sent to ${email}`, {
-      description: "Connect backend to enable real functionality",
-    });
-    setShowForgotPassword(false);
+    setSubmitting(true);
+    try {
+      const fd = new FormData(e.currentTarget);
+      const email = (fd.get("email") || "").toString().trim();
+      await apiPost("/auth/forgot-password", { email });
+      toast.success("Link reset dikirim", {
+        description: `Cek email ${email}`,
+      });
+      setShowForgotPassword(false);
+    } catch (e) {
+      toast.error("Gagal kirim link reset", { description: getErrorMsg(e) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
+  // --- RESET PASSWORD (contoh: butuh token dari URL/query)
+  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast.success("Password reset successful", {
-      description: "Connect backend to enable real functionality",
-    });
-    setIsResetMode(false);
+    setSubmitting(true);
+    try {
+      const fd = new FormData(e.currentTarget);
+      const password = (fd.get("password") || "").toString();
+      const confirmPassword = (fd.get("confirmPassword") || "").toString();
+      if (password !== confirmPassword)
+        throw new Error("Password konfirmasi tidak sama.");
+
+      // Ambil token dari query mis. ?token=abcd
+      const token = new URLSearchParams(window.location.search).get("token");
+      if (!token) throw new Error("Token reset tidak ditemukan.");
+
+      await apiPost("/auth/reset-password", { token, password });
+      toast.success("Password berhasil direset");
+      setIsResetMode(false);
+    } catch (e) {
+      toast.error("Reset password gagal", { description: getErrorMsg(e) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (isResetMode) {
@@ -92,7 +159,7 @@ export default function Auth() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent hover:text-black"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -215,7 +282,7 @@ export default function Auth() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent hover:text-black"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
@@ -234,8 +301,8 @@ export default function Auth() {
                 >
                   Forgot password?
                 </Button>
-                <Button type="submit" className="w-full">
-                  Sign In
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ?? "Please wait..."}Sign In
                 </Button>
               </form>
             </TabsContent>
@@ -276,7 +343,7 @@ export default function Auth() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent hover:text-black"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
