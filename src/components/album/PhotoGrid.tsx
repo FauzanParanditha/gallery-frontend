@@ -51,6 +51,8 @@ export const PhotoGrid = ({
                 src={photo.url}
                 alt={photo.caption || "Photo"}
                 className="w-full h-full object-cover"
+                width={100}
+                height={100}
               />
               <div className="absolute top-2 right-2 flex gap-2">
                 <Badge variant="secondary" className="gap-1">

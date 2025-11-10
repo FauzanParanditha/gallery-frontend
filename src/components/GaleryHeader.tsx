@@ -9,7 +9,7 @@ export const GalleryHeader = () => {
   const tabs = ["HIGHLIGHTS", "JCM", "EMPIRE"];
 
   return (
-    <header className="w-full sticky top-0 bg-white/95 backdrop-blur z-50">
+    <header className="w-full sticky top-0  backdrop-blur z-50">
       <div className="max-w-7xl mx-auto px-6 py-4">
         {/* Top section */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -19,7 +19,7 @@ export const GalleryHeader = () => {
               AKU & KAMU - CINEMA VISIT YOGYAKARTA
             </h1>
             <p className="text-xs md:text-sm tracking-widest text-muted-foreground mt-1">
-              DIDIPSI
+              PARANDITHA
             </p>
           </div>
 

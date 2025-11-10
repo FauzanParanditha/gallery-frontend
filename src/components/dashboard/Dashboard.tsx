@@ -45,6 +45,8 @@ const Dashboard = () => {
           src={heroImage.src}
           alt="Dashboard Hero"
           className="w-full h-full object-cover"
+          width={100}
+          height={100}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-accent/90 flex items-center">
           <div className="px-8 text-white">
@@ -84,14 +86,23 @@ const Dashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
-          <Button onClick={() => router.push("/albums")} className="gap-2">
+          <Button
+            onClick={() => router.push("/dashboard/admin/albums")}
+            className="gap-2"
+          >
             <Plus className="h-4 w-4" />
             Create New Album
           </Button>
-          <Button variant="outline" onClick={() => router.push("/albums")}>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/admin/albums")}
+          >
             View All Albums
           </Button>
-          <Button variant="outline" onClick={() => router.push("/photos")}>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/admin/photos")}
+          >
             Browse Photos
           </Button>
         </CardContent>

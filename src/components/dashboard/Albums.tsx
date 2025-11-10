@@ -577,6 +577,8 @@ const Albums = () => {
                     src={album.coverImage}
                     alt={album.title}
                     className="w-full h-full object-cover"
+                    width={100}
+                    height={100}
                   />
                 ) : (
                   <FolderOpen className="h-16 w-16 text-primary/40" />
