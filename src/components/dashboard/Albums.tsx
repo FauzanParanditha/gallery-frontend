@@ -55,6 +55,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -572,7 +573,7 @@ const Albums = () => {
                 }
               >
                 {album.coverImage ? (
-                  <img
+                  <Image
                     src={album.coverImage}
                     alt={album.title}
                     className="w-full h-full object-cover"

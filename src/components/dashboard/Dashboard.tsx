@@ -9,7 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FolderOpen, Image, Plus, Tags } from "lucide-react";
+import { FolderOpen, Image as ImageIcon, Plus, Tags } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const Dashboard = () => {
@@ -22,7 +23,12 @@ const Dashboard = () => {
       icon: FolderOpen,
       color: "text-primary",
     },
-    { title: "Total Photos", value: "248", icon: Image, color: "text-accent" },
+    {
+      title: "Total Photos",
+      value: "248",
+      icon: ImageIcon,
+      color: "text-accent",
+    },
     {
       title: "Total Tags",
       value: "36",
@@ -35,7 +41,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl h-64">
-        <img
+        <Image
           src={heroImage.src}
           alt="Dashboard Hero"
           className="w-full h-full object-cover"

@@ -28,11 +28,12 @@ import {
   CheckCircle,
   Clock,
   Filter,
-  Image,
+  Image as ImageIcon,
   RefreshCw,
   Star,
   Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 
 interface Photo {
@@ -236,7 +237,7 @@ const Photos = () => {
       {/* Photos Grid */}
       {filteredPhotos.length === 0 ? (
         <Card className="p-16 text-center">
-          <Image className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+          <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">No photos found</h3>
           <p className="text-muted-foreground">
             {photos.length === 0
@@ -255,7 +256,7 @@ const Photos = () => {
             {filteredPhotos.map((photo) => (
               <Card key={photo.id} className="overflow-hidden">
                 <div className="relative aspect-square bg-muted">
-                  <img
+                  <Image
                     src={photo.url}
                     alt={photo.caption || "Photo"}
                     className="w-full h-full object-cover"

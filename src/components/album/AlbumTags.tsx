@@ -89,7 +89,7 @@ export const AlbumTags = ({
             <CommandList>
               {filteredTags.length === 0 && inputValue.trim() ? (
                 <CommandEmpty>
-                  Press Enter to create "{inputValue}"
+                  Press Enter to create &quot;{inputValue}&quot;
                 </CommandEmpty>
               ) : (
                 <>

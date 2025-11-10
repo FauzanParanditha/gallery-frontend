@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 
 interface AlbumCoverUploadProps {
@@ -47,7 +48,7 @@ export const AlbumCoverUpload = ({
       <h3 className="font-semibold mb-3">Album Cover</h3>
       {preview ? (
         <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-          <img
+          <Image
             src={preview}
             alt="Album cover"
             className="w-full h-full object-cover"

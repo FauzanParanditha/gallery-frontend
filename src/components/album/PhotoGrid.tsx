@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, CheckCircle, Clock, RefreshCw, Star } from "lucide-react";
+import Image from "next/image";
 
 export interface Photo {
   id: string;
@@ -46,7 +47,7 @@ export const PhotoGrid = ({
         {photos.map((photo) => (
           <Card key={photo.id} className="overflow-hidden">
             <div className="relative aspect-square bg-muted">
-              <img
+              <Image
                 src={photo.url}
                 alt={photo.caption || "Photo"}
                 className="w-full h-full object-cover"
