@@ -49,18 +49,24 @@ clientAxios.interceptors.response.use(
     const original = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
+    const status = error.response?.status ?? 0;
 
-    // Jika bukan 401 atau sudah pernah retry, lemparkan apa adanya
-    if (!original || original._retry || error.response?.status !== 401) {
+    // kalau bukan 401 atau tidak ada config -> lempar
+    if (!original || status !== 401) throw error;
+
+    const url = (original.url || "").toString();
+    // JANGAN refresh kalau 401-nya dari refresh atau login/me (opsional)
+    if (url.includes("/auth")) {
       throw error;
     }
 
+    // stop infinite retry
+    if (original._retry) throw error;
     original._retry = true;
 
-    // Antri kalau ada refresh yang sedang berjalan
+    // tunggu refresh yang sedang jalan
     const canProceed = await waitForRefresh();
     if (!canProceed) {
-      // refresh sebelumnya gagal, paksa logout
       handleAuthFailed();
       throw error;
     }
@@ -68,17 +74,19 @@ clientAxios.interceptors.response.use(
     try {
       if (!isRefreshing) {
         isRefreshing = true;
-        // Panggil endpoint refresh kamu (samakan path-nya dengan server)
+
+        // pakai instance TANPA interceptor untuk panggil refresh
         await axios.post(
-          `${API_BASE_URL}/auth/refresh`, // atau /v1/auth/refresh jika prefix v1
+          `${API_BASE_URL}/v1/auth/refresh`,
           {},
           { withCredentials: true }
         );
+
         isRefreshing = false;
         flushQueue(true);
       }
 
-      // Setelah refresh sukses, ulangi request awal. Karena pakai cookie, tidak perlu set header apa pun.
+      // ulangi request awal dengan cookie baru
       return clientAxios(original as AxiosRequestConfig);
     } catch (e) {
       isRefreshing = false;

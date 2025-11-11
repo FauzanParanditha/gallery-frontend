@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiPost } from "@/libs/clientAxios";
 import { getErrorMsg } from "@/libs/helper";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
@@ -19,10 +20,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-type LoginRes = { user: { id: string; email: string; name?: string } };
-
 export default function Auth() {
   const router = useRouter();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isResetMode, setIsResetMode] = useState(false);
@@ -40,13 +40,8 @@ export default function Auth() {
       if (!email || !password)
         throw new Error("Email dan password wajib diisi.");
 
-      // Panggil backend: server akan set cookie access + refresh
-      const data = await apiPost<LoginRes>("/v1/auth/login", {
-        email,
-        password,
-      });
-      toast.success("Login berhasil", { description: data.user?.email });
-      router.push("/dashboard/admin");
+      await login({ email, password }); // << gunakan context
+      // tidak perlu router.push di sini karena login() sudah push
     } catch (e) {
       toast.error("Login gagal", { description: getErrorMsg(e) });
     } finally {
@@ -302,7 +297,7 @@ export default function Auth() {
                   Forgot password?
                 </Button>
                 <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ?? "Please wait..."}Sign In
+                  {submitting ? "Please wait..." : "Sign In"}
                 </Button>
               </form>
             </TabsContent>

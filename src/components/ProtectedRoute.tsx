@@ -6,7 +6,7 @@ import { PropsWithChildren, useEffect } from "react";
 import FullScreenLoader from "./FullScreenLoader";
 
 export default function ProtectedRoute({ children }: PropsWithChildren) {
-  const { isAuthenticated, isLoadingAuth, user } = useAuth();
+  const { isLoadingAuth, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,7 +19,6 @@ export default function ProtectedRoute({ children }: PropsWithChildren) {
     return <FullScreenLoader />;
   }
 
-  // Jangan render UI sebelum authorized
   if (!user) return null;
 
   return <>{children}</>;

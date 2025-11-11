@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = async () => {
     try {
       // server baca cookie HttpOnly -> kembalikan user
-      const data = await apiGet<User>("/v1/auth/me");
+      const data = await apiGet<{ user: User }>("/v1/auth/me");
       setUser(data.user);
     } catch {
       setUser(null);
