@@ -1,16 +1,19 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const NotFound = () => {
-  const location = useLocation();
+  const pathname = usePathname();
 
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
+    toast.error(
+      `404 Error: User attempted to access non-existent route:,
+      ${pathname}`
     );
-  }, [location.pathname]);
+  }, [pathname]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
