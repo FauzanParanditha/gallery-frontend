@@ -9,7 +9,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3333";
 
 // ------- Buat instance dasar
-export const clientAxios: AxiosInstance = axios.create({
+export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // <-- penting agar cookie access/refresh ikut dikirim
   timeout: 25000,
@@ -36,14 +36,14 @@ function flushQueue(ok: boolean) {
 
 // ------- (Opsional) sisipkan Authorization jika kamu juga simpan access di memory/browser
 // Karena kamu pakai httpOnly cookie, bagian ini bisa di-skip.
-// clientAxios.interceptors.request.use((config) => {
+// api.interceptors.request.use((config) => {
 //   const token = yourAccessTokenStore.get(); // kalau ada
 //   if (token) config.headers.Authorization = `Bearer ${token}`;
 //   return config;
 // });
 
 // ------- Interceptor respon: auto-refresh saat 401
-clientAxios.interceptors.response.use(
+api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     const original = error.config as
@@ -87,7 +87,7 @@ clientAxios.interceptors.response.use(
       }
 
       // ulangi request awal dengan cookie baru
-      return clientAxios(original as AxiosRequestConfig);
+      return api(original as AxiosRequestConfig);
     } catch (e) {
       isRefreshing = false;
       flushQueue(false);
@@ -108,7 +108,7 @@ function handleAuthFailed() {
 }
 
 export async function apiGet<T>(url: string, config?: AxiosRequestConfig) {
-  const { data } = await clientAxios.get<T>(url, config);
+  const { data } = await api.get<T>(url, config);
   return data;
 }
 export async function apiPost<T>(
@@ -116,7 +116,7 @@ export async function apiPost<T>(
   body?: unknown,
   config?: AxiosRequestConfig
 ) {
-  const { data } = await clientAxios.post<T>(url, body, config);
+  const { data } = await api.post<T>(url, body, config);
   return data;
 }
 export async function apiPatch<T>(
@@ -124,10 +124,10 @@ export async function apiPatch<T>(
   body?: unknown,
   config?: AxiosRequestConfig
 ) {
-  const { data } = await clientAxios.patch<T>(url, body, config);
+  const { data } = await api.patch<T>(url, body, config);
   return data;
 }
 export async function apiDelete<T>(url: string, config?: AxiosRequestConfig) {
-  const { data } = await clientAxios.delete<T>(url, config);
+  const { data } = await api.delete<T>(url, config);
   return data;
 }

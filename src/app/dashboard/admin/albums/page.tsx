@@ -1,9 +1,10 @@
-import Albums from "@/components/dashboard/Albums";
+import AlbumsPageClient from "@/app/dashboard/admin/albums/AlbumsPageClient";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Albums | Page",
 };
 
-export default function LoginPage() {
-  return <Albums />;
+export default function AlbumsPage() {
+  return <AlbumsPageClient />;
 }

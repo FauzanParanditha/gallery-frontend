@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiPost } from "@/libs/clientAxios";
+import { apiPost } from "@/libs/api";
 import { getErrorMsg } from "@/libs/helper";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";

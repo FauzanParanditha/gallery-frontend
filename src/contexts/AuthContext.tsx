@@ -1,6 +1,6 @@
 "use client";
 
-import { apiGet, apiPost } from "@/libs/clientAxios";
+import { apiGet, apiPost } from "@/libs/api";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 

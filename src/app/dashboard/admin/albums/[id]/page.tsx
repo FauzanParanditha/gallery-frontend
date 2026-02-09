@@ -1,9 +1,6 @@
-import AlbumDetail from "@/components/dashboard/AlbumDetail";
+import AlbumDetailPageClient from "./AlbumDetailPageClient";
 
-export const metadata = {
-  title: "Detail Album | Page",
-};
-
-export default function LoginPage() {
-  return <AlbumDetail />;
+export default async function Page({ params }: { params: { id: string } }) {
+  const { id } = await params;
+  return <AlbumDetailPageClient albumId={id} />;
 }

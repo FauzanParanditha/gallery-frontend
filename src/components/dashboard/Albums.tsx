@@ -43,267 +43,146 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import type { AlbumVM } from "@/types/album";
 import { format } from "date-fns";
 import {
   Calendar as CalendarIcon,
   Edit,
   Eye,
   EyeOff,
-  Filter,
   FolderOpen,
   Plus,
   Trash2,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-interface Album {
-  id: string;
-  title: string;
-  slug: string;
-  description: string;
-  coverImage?: string;
-  eventDate: Date;
-  published: boolean;
-  tags: string[];
-  createdOn: Date;
+type AlbumsProps = {
+  albums: AlbumVM[];
+  isLoading: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
   photoCount: number;
-  isDeleted?: boolean;
-}
 
-const Albums = () => {
+  q: string;
+  setQ: (v: string) => void;
+  publishedFilter: "all" | "published" | "unpublished";
+  setPublishedFilter: (v: "all" | "published" | "unpublished") => void;
+
+  onCreate: (p: {
+    title: string;
+    slug?: string;
+    description?: string;
+    eventDate?: Date;
+  }) => Promise<void>;
+  onEdit: (
+    id: string,
+    p: Partial<{
+      title: string;
+      slug: string;
+      description: string;
+      eventDate: Date;
+    }>
+  ) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onTogglePublish: (a: AlbumVM) => Promise<void>;
+  onSetCover: (albumId: string, photoId: string) => Promise<void>;
+};
+
+const toSlug = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+export default function Albums(props: AlbumsProps) {
+  const {
+    albums,
+    isLoading,
+    hasMore,
+    onLoadMore,
+    photoCount,
+    q,
+    setQ,
+    publishedFilter,
+    setPublishedFilter,
+    onCreate,
+    onEdit,
+    onDelete,
+    onTogglePublish,
+  } = props;
+
   const router = useRouter();
-  const { toast } = useToast();
-  const [albums, setAlbums] = useState<Album[]>([
-    {
-      id: "1",
-      title: "Summer Vacation 2024",
-      slug: "summer-vacation-2024",
-      description: "Beach memories",
-      eventDate: new Date("2024-07-15"),
-      published: true,
-      tags: ["vacation", "beach", "summer"],
-      createdOn: new Date("2024-01-10"),
-      photoCount: 24,
-    },
-    {
-      id: "2",
-      title: "Family Portraits",
-      slug: "family-portraits",
-      description: "Professional photoshoot",
-      eventDate: new Date("2024-05-20"),
-      published: true,
-      tags: ["family", "portraits"],
-      createdOn: new Date("2024-02-15"),
-      photoCount: 18,
-    },
-    {
-      id: "3",
-      title: "Nature & Landscapes",
-      slug: "nature-landscapes",
-      description: "Hiking adventures",
-      eventDate: new Date("2024-08-10"),
-      published: false,
-      tags: ["nature", "hiking", "landscapes"],
-      createdOn: new Date("2024-03-20"),
-      photoCount: 42,
-    },
-    {
-      id: "4",
-      title: "City Exploration",
-      slug: "city-exploration",
-      description: "Urban photography",
-      eventDate: new Date("2024-09-05"),
-      published: true,
-      tags: ["urban", "city"],
-      createdOn: new Date("2024-04-12"),
-      photoCount: 31,
-    },
-  ]);
 
+  // Create dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [deleteAlbumId, setDeleteAlbumId] = useState<string | null>(null);
-  const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
   const [newAlbum, setNewAlbum] = useState({
     title: "",
     slug: "",
     description: "",
     eventDate: new Date(),
-    tags: "",
   });
 
-  // Filters
-  const [publishedFilter, setPublishedFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
+  // Edit & delete dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingAlbum, setEditingAlbum] = useState<AlbumVM | null>(null);
+  const [deleteAlbumId, setDeleteAlbumId] = useState<string | null>(null);
 
-  // Get all unique tags
-  const allTags = Array.from(new Set(albums.flatMap((album) => album.tags)));
+  // Optional: simple client-side filter by q (kalau backend q sudah dipakai, ini bisa dihapus)
+  const filteredAlbums = useMemo(() => {
+    if (!q?.trim()) return albums;
+    const k = q.toLowerCase();
+    return albums.filter(
+      (a) =>
+        a.title.toLowerCase().includes(k) ||
+        a.slug.toLowerCase().includes(k) ||
+        a.description.toLowerCase().includes(k)
+    );
+  }, [albums, q]);
 
-  // Filter albums
-  const filteredAlbums = albums.filter((album) => {
-    if (album.isDeleted) return false;
+  const hasActiveFilters = publishedFilter !== "all" || !!q;
 
-    if (
-      publishedFilter !== "all" &&
-      album.published !== (publishedFilter === "published")
-    ) {
-      return false;
-    }
-
-    if (dateRange.from && album.eventDate < dateRange.from) return false;
-    if (dateRange.to && album.eventDate > dateRange.to) return false;
-
-    if (
-      selectedTags.length > 0 &&
-      !selectedTags.some((tag) => album.tags.includes(tag))
-    ) {
-      return false;
-    }
-
-    return true;
-  });
-
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-  };
-
-  const handleCreateAlbum = () => {
-    if (!newAlbum.title.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an album title",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const album: Album = {
-      id: Date.now().toString(),
-      title: newAlbum.title,
-      slug: newAlbum.slug || generateSlug(newAlbum.title),
-      description: newAlbum.description,
+  // Handlers
+  const handleCreateAlbum = async () => {
+    if (!newAlbum.title.trim()) return;
+    await onCreate({
+      title: newAlbum.title.trim(),
+      slug: newAlbum.slug?.trim() || toSlug(newAlbum.title),
+      description: newAlbum.description?.trim(),
       eventDate: newAlbum.eventDate,
-      published: false,
-      tags: newAlbum.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-      createdOn: new Date(),
-      photoCount: 0,
-    };
-
-    setAlbums([album, ...albums]);
+    });
     setNewAlbum({
       title: "",
       slug: "",
       description: "",
       eventDate: new Date(),
-      tags: "",
     });
     setIsCreateDialogOpen(false);
-
-    toast({
-      title: "Album created!",
-      description: `"${album.title}" has been created successfully.`,
-    });
   };
 
-  const handleEditAlbum = () => {
-    if (!editingAlbum || !editingAlbum.title.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an album title",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setAlbums(
-      albums.map((album) =>
-        album.id === editingAlbum.id ? editingAlbum : album
-      )
-    );
-
-    setIsEditDialogOpen(false);
-    setEditingAlbum(null);
-
-    toast({
-      title: "Album updated!",
-      description: `"${editingAlbum.title}" has been updated successfully.`,
-    });
-  };
-
-  const handleTogglePublish = (albumId: string) => {
-    const album = albums.find((a) => a.id === albumId);
-    if (!album) return;
-
-    setAlbums(
-      albums.map((a) =>
-        a.id === albumId ? { ...a, published: !a.published } : a
-      )
-    );
-
-    toast({
-      title: album.published ? "Album deactivated" : "Album published",
-      description: `"${album.title}" has been ${
-        album.published ? "deactivated" : "published"
-      }.`,
-    });
-  };
-
-  const handleDeleteAlbum = () => {
-    if (!deleteAlbumId) return;
-
-    const album = albums.find((a) => a.id === deleteAlbumId);
-    if (!album) return;
-
-    setAlbums(
-      albums.map((a) =>
-        a.id === deleteAlbumId ? { ...a, isDeleted: true } : a
-      )
-    );
-
-    setDeleteAlbumId(null);
-
-    toast({
-      title: "Album deleted",
-      description: `"${album.title}" has been deleted.`,
-    });
-  };
-
-  const openEditDialog = (album: Album) => {
+  const openEditDialog = (album: AlbumVM) => {
     setEditingAlbum({ ...album });
     setIsEditDialogOpen(true);
   };
 
-  const toggleTagFilter = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
+  const handleEditAlbum = async () => {
+    if (!editingAlbum) return;
+    if (!editingAlbum.title.trim()) return;
 
-  const clearFilters = () => {
-    setPublishedFilter("all");
-    setDateRange({});
-    setSelectedTags([]);
+    await onEdit(editingAlbum.id, {
+      title: editingAlbum.title.trim(),
+      slug: editingAlbum.slug.trim(),
+      description: editingAlbum.description.trim(),
+      eventDate: editingAlbum.eventDate,
+    });
+    setIsEditDialogOpen(false);
+    setEditingAlbum(null);
   };
-
-  const hasActiveFilters =
-    publishedFilter !== "all" ||
-    dateRange.from ||
-    dateRange.to ||
-    selectedTags.length > 0;
 
   return (
     <div className="space-y-6">
+      {/* Header + toolbar */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Albums</h1>
@@ -313,23 +192,35 @@ const Albums = () => {
         </div>
 
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            Filters
+          <div className="hidden md:flex items-center gap-2">
+            <Input
+              placeholder="Search title/slug/description…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-64"
+            />
+            <Select
+              value={publishedFilter}
+              onValueChange={(v: "all" | "published" | "unpublished") =>
+                setPublishedFilter(v)
+              }
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="unpublished">Unpublished</SelectItem>
+              </SelectContent>
+            </Select>
             {hasActiveFilters && (
               <Badge variant="secondary" className="ml-1">
-                {[
-                  publishedFilter !== "all" ? 1 : 0,
-                  dateRange.from || dateRange.to ? 1 : 0,
-                  selectedTags.length,
-                ].reduce((a, b) => a + b, 0)}
+                Active filters
               </Badge>
             )}
-          </Button>
+          </div>
+
           <Dialog
             open={isCreateDialogOpen}
             onOpenChange={setIsCreateDialogOpen}
@@ -353,7 +244,7 @@ const Albums = () => {
                     <Label htmlFor="title">Album Title *</Label>
                     <Input
                       id="title"
-                      placeholder="e.g., Summer Vacation 2024"
+                      placeholder="e.g., Summer Vacation 2025"
                       value={newAlbum.title}
                       onChange={(e) =>
                         setNewAlbum({ ...newAlbum, title: e.target.value })
@@ -408,17 +299,6 @@ const Albums = () => {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tags">Tags (comma-separated)</Label>
-                  <Input
-                    id="tags"
-                    placeholder="e.g., vacation, beach, summer"
-                    value={newAlbum.tags}
-                    onChange={(e) =>
-                      setNewAlbum({ ...newAlbum, tags: e.target.value })
-                    }
-                  />
-                </div>
                 <Button onClick={handleCreateAlbum} className="w-full">
                   Create Album
                 </Button>
@@ -428,119 +308,8 @@ const Albums = () => {
         </div>
       </div>
 
-      {/* Filters Panel */}
-      {showFilters && (
-        <Card className="p-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Filters</h3>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  Clear all
-                </Button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Published Filter */}
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={publishedFilter}
-                  onValueChange={setPublishedFilter}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="unpublished">Unpublished</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Date Range Filter */}
-              <div className="space-y-2">
-                <Label>Event Date From</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange.from
-                        ? format(dateRange.from, "PPP")
-                        : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateRange.from}
-                      onSelect={(date) =>
-                        setDateRange({ ...dateRange, from: date })
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Event Date To</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange.to
-                        ? format(dateRange.to, "PPP")
-                        : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateRange.to}
-                      onSelect={(date) =>
-                        setDateRange({ ...dateRange, to: date })
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            {/* Tags Filter */}
-            {allTags.length > 0 && (
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="flex flex-wrap gap-2">
-                  {allTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={
-                        selectedTags.includes(tag) ? "default" : "outline"
-                      }
-                      className="cursor-pointer"
-                      onClick={() => toggleTagFilter(tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {filteredAlbums.length === 0 ? (
+      {/* Empty state / Grid */}
+      {!isLoading && filteredAlbums.length === 0 ? (
         <Card className="p-12 text-center">
           <FolderOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">
@@ -552,9 +321,17 @@ const Albums = () => {
               : "Create your first album to start organizing photos"}
           </p>
           {hasActiveFilters ? (
-            <Button variant="outline" onClick={clearFilters}>
-              Clear filters
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => setQ("")}>
+                Clear search
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPublishedFilter("all")}
+              >
+                Reset status
+              </Button>
+            </div>
           ) : (
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -563,117 +340,127 @@ const Albums = () => {
           )}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAlbums.map((album) => (
-            <Card key={album.id} className="overflow-hidden group">
-              <div
-                className="aspect-square bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center cursor-pointer"
-                onClick={() =>
-                  router.push(`/dashboard/admin/albums/${album.id}`)
-                }
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAlbums.map((album) => (
+              <Card key={album.id} className="overflow-hidden group">
+                <div
+                  className="aspect-square bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center cursor-pointer"
+                  onClick={() =>
+                    router.push(`/dashboard/admin/albums/${album.id}`)
+                  }
+                >
+                  {album.coverPhotoId ? (
+                    <Image
+                      src={`/v1/photos/${album.coverPhotoId}/thumb`}
+                      alt={album.title}
+                      className="w-full h-full object-cover"
+                      width={600}
+                      height={600}
+                    />
+                  ) : (
+                    <FolderOpen className="h-16 w-16 text-primary/40" />
+                  )}
+                </div>
+
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg truncate">
+                        {album.title}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        /{album.slug}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={album.isPublished ? "default" : "secondary"}
+                    >
+                      {album.isPublished ? "Published" : "Draft"}
+                    </Badge>
+                  </div>
+                  <CardDescription className="line-clamp-2">
+                    {album.description}
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Event Date:</span>
+                    <span>
+                      {album.eventDate
+                        ? format(album.eventDate, "MMM d, yyyy")
+                        : "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Created:</span>
+                    <span>{format(album.createdAt, "MMM d, yyyy")}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Photos:</span>
+                    <span>{photoCount}</span>
+                  </div>
+
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(album);
+                      }}
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant={album.isPublished ? "secondary" : "default"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTogglePublish(album);
+                      }}
+                    >
+                      {album.isPublished ? (
+                        <EyeOff className="h-3 w-3" />
+                      ) : (
+                        <Eye className="h-3 w-3" />
+                      )}
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteAlbumId(album.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {hasMore && (
+            <div className="flex justify-center">
+              <Button
+                onClick={onLoadMore}
+                disabled={isLoading}
+                className="mt-2"
               >
-                {album.coverImage ? (
-                  <Image
-                    src={album.coverImage}
-                    alt={album.title}
-                    className="w-full h-full object-cover"
-                    width={100}
-                    height={100}
-                  />
-                ) : (
-                  <FolderOpen className="h-16 w-16 text-primary/40" />
-                )}
-              </div>
-
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">
-                      {album.title}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      /{album.slug}
-                    </p>
-                  </div>
-                  <Badge variant={album.published ? "default" : "secondary"}>
-                    {album.published ? "Published" : "Draft"}
-                  </Badge>
-                </div>
-                <CardDescription className="line-clamp-2">
-                  {album.description}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Event Date:</span>
-                  <span>{format(album.eventDate, "MMM d, yyyy")}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Created:</span>
-                  <span>{format(album.createdOn, "MMM d, yyyy")}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Photos:</span>
-                  <span>{album.photoCount}</span>
-                </div>
-
-                {album.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {album.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-2 border-t">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditDialog(album);
-                    }}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant={album.published ? "secondary" : "default"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTogglePublish(album.id);
-                    }}
-                  >
-                    {album.published ? (
-                      <EyeOff className="h-3 w-3" />
-                    ) : (
-                      <Eye className="h-3 w-3" />
-                    )}
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteAlbumId(album.id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                Load more
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Edit Dialog */}
@@ -707,7 +494,10 @@ const Albums = () => {
                     id="edit-slug"
                     value={editingAlbum.slug}
                     onChange={(e) =>
-                      setEditingAlbum({ ...editingAlbum, slug: e.target.value })
+                      setEditingAlbum({
+                        ...editingAlbum,
+                        slug: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -735,10 +525,12 @@ const Albums = () => {
                       className="w-full justify-start text-left font-normal"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(editingAlbum.eventDate, "PPP")}
+                      {editingAlbum.eventDate
+                        ? format(editingAlbum.eventDate, "PPP")
+                        : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={editingAlbum.eventDate}
@@ -750,22 +542,6 @@ const Albums = () => {
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-tags">Tags (comma-separated)</Label>
-                <Input
-                  id="edit-tags"
-                  value={editingAlbum.tags.join(", ")}
-                  onChange={(e) =>
-                    setEditingAlbum({
-                      ...editingAlbum,
-                      tags: e.target.value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
               </div>
               <Button onClick={handleEditAlbum} className="w-full">
                 Save Changes
@@ -785,13 +561,18 @@ const Albums = () => {
             <AlertDialogTitle>Delete Album</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete this album? This action will
-              soft-delete the album and it can be recovered later.
+              soft-delete the album.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteAlbum}
+              onClick={async () => {
+                if (deleteAlbumId) {
+                  await onDelete(deleteAlbumId);
+                }
+                setDeleteAlbumId(null);
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
@@ -801,6 +582,4 @@ const Albums = () => {
       </AlertDialog>
     </div>
   );
-};
-
-export default Albums;
+}
